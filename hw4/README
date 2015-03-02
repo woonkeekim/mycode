@@ -1,0 +1,12 @@
+You can compile the files with using command
+$> make
+or
+$> make hw4
+
+and clean the files by using command
+$> make clean
+
+
+for both mystery 1 and mystry 2, I used the histogram to generate key, the solve to find peroid.
+I switched the generated key little by little to find some key.
+And by reading some words like X'X, wher X can be any characeter, it must be i'm.

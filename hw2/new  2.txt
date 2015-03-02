@@ -1,0 +1,110 @@
+set p0="yesnomaybe"
+set p1="cs531-f09"
+set p2="vcrypto"
+set p3="password"
+set p4="emptyString"
+set p5="applied"
+set p6="cryptography"
+set p7="publickey"
+
+set len0=320
+set len1=241
+set len2=202
+set len3=803
+set len4=724
+
+set srcdir=~csci531/public/cs531/hw2
+
+./hw2 stream -p="$p0" -l=$len0 > bar-s0.stream
+./hw2 stream -p="$p1" -l=$len1 > bar-s1.stream
+./hw2 stream -p="$p2" -l=$len2 > bar-s2.stream
+./hw2 stream -p="$p3" -l=$len3 > bar-s3.stream
+./hw2 stream -p="$p4" -l=$len4 > bar-s4.stream
+
+foreach f (0 1 2 3 4)
+	echo "==>$srcdir/s$f.stream"
+	diff $srcdir/bar-s$f.stream bar-s$f.stream
+end
+
+
+cat $srcdir/small.pbm | ./hw2 encrypt -p="$p0" -out=bar-small
+cat $srcdir/money.pbm | ./hw2 encrypt -p="$p1" -out=bar-money
+cat $srcdir/bowtie.pbm | ./hw2 encrypt -p="$p2" -out=bar-bowtie
+cat $srcdir/cross.pbm | ./hw2 encrypt -p="$p3" -out=bar-cross
+cat $srcdir/hello.pbm | ./hw2 encrypt -p="$p4" -out=bar-hello
+cat $srcdir/nouturn.pbm | ./hw2 encrypt -p="$p5" -out=bar-nouturn
+cat $srcdir/stop.pbm | ./hw2 encrypt -p="$p6" -out=bar-stop
+cat $srcdir/viterbi.pbm | ./hw2 encrypt -p="$p7" -out=bar-viterbi
+
+
+foreach f (small money bowtie cross hello nouturn stop viterbi)
+			echo "==> $srcdir/$f.pbm"
+			diff $srcdir/bar-$f.1.pbm bar-$f.1.pbm 
+			diff $srcdir/bar-$f.2.pbm bar-$f.2.pbm 
+		end
+
+
+./hw2 encrypt -p="$p0" -out=bar-small $srcdir/small.pbm
+./hw2 encrypt -p="$p1" -out=bar-money $srcdir/money.pbm
+./hw2 encrypt -p="$p2" -out=bar-bowtie $srcdir/bowtie.pbm
+./hw2 encrypt -p="$p3" -out=bar-cross $srcdir/cross.pbm
+./hw2 encrypt -p="$p4" -out=bar-hello $srcdir/hello.pbm
+./hw2 encrypt -p="$p5" -out=bar-nouturn $srcdir/nouturn.pbm
+./hw2 encrypt -p="$p6" -out=bar-stop $srcdir/stop.pbm
+./hw2 encrypt -p="$p7" -out=bar-viterbi $srcdir/viterbi.pbm
+
+foreach f (small money bowtie cross hello nouturn stop viterbi)
+			echo "==> $srcdir/$f.pbm"
+			diff $srcdir/bar-$f.1.pbm bar-$f.1.pbm 
+			diff $srcdir/bar-$f.2.pbm bar-$f.2.pbm 
+		end
+
+
+foreach f (small money bowtie cross hello nouturn stop viterbi)
+			./hw2 merge $srcdir/bar-$f.1.pbm $srcdir/bar-$f.2.pbm > bar-merged.pbm
+			echo "==> $srcdir/$f"
+			diff $srcdir/bar-$f-merged.pbm bar-merged.pbm
+			/bin/rm bar-merged.pbm
+		end
+
+		
+		
+foreach f (small money bowtie cross hello nouturn stop viterbi)
+			cat $srcdir/bar-$f-merged.pbm | ./hw2 decrypt > bar.pbm
+			echo "==> $srcdir/$f.pbm"
+			diff $srcdir/bar-$f.pbm bar.pbm
+			/bin/rm bar.pbm
+		end
+
+		foreach f (small money bowtie cross hello nouturn stop viterbi)
+			./hw2 decrypt $srcdir/bar-$f-merged.pbm > bar.pbm
+			echo "==> $srcdir/$f.pbm"
+			diff $srcdir/bar-$f.pbm bar.pbm
+			/bin/rm bar.pbm
+		end
+
+		
+./hw2 encrypt -p="$p0" -out=bar $srcdir/small.pbm
+		./hw2 merge bar.1.pbm bar.2.pbm > bar-merged.pbm
+		./hw2 decrypt bar-merged.pbm > bar.pbm
+
+		echo "==> $srcdir/small.pbm "
+		diff $srcdir/small.pbm bar.pbm
+		
+ set srcdir=~csci531/public/cs531/hw2
+		/bin/rm bar*.pbm
+
+		cat $srcdir/hello.pbm | ./hw2 encrypt -p="$p1" -out=bar
+		./hw2 merge bar.1.pbm bar.2.pbm | ./hw2 decrypt > bar.pbm
+
+		echo "==> $srcdir/hello.pbm "
+		diff $srcdir/hello.pbm bar.pbm
+		
+ set srcdir=~csci531/public/cs531/hw2
+		/bin/rm bar*.pbm
+
+		cat $srcdir/bowtie.pbm | ./hw2 encrypt -p="$p2" -out=bar
+		./hw2 merge bar.1.pbm bar.2.pbm | ./hw2 decrypt > bar.pbm
+
+		echo "==> $srcdir/bowtie.pbm "
+		diff $srcdir/bowtie.pbm bar.pbm

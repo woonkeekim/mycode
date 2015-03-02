@@ -1,0 +1,1 @@
+void merge(char*, char*);
