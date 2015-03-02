@@ -1,0 +1,3 @@
+How to compile the code : make hw1
+for the arrays in decode.c and encode.c I got it from 
+Algorithm Implementation/Miscellaneous/Base64, http://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64
