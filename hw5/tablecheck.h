@@ -1,0 +1,1 @@
+void tablecheck(char *);

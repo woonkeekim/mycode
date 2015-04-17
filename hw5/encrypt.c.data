@@ -1,0 +1,472 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "tablecheck.h"
+
+void encryption(unsigned char* buf1, unsigned char keys[][6], int S[][64], int *P, int *IP, int *invIP, int *E, unsigned char* result, int done)
+{	
+	int i = 0;
+	unsigned char* message;
+	message = (unsigned char*) malloc(8 * sizeof(unsigned char*));
+
+	for(i = 0; i < 64; i++)
+	{
+		message[i/8] <<= 1;
+		message[i/8] += (buf1[(IP[i]-1)/8] >> (7-((IP[i]-1)%8)))&1;
+	}
+	for(i = 0; i< 16; i++)
+	{
+		int j = 0;
+		if(done == 0)
+		{
+			fprintf(stderr,"(L%d,R%d)=", i, i);
+			for(j = 0; j < 8; j++)
+			{
+				fprintf(stderr, "%02x", message[j]);
+			}
+			fprintf(stderr, "\n");
+		}
+		unsigned char* Eout;
+		Eout = (unsigned char*) malloc(6*sizeof(unsigned char*));
+		for(j = 0; j < 48; j++)
+		{
+			if((j %8) == 0)
+				Eout[j/8] = 0;
+			Eout[j/8] <<= 1;
+			Eout[j/8] += (message[4+(E[j]-1)/8] >> (7-((E[j]-1)%8)))&1;
+		}
+		unsigned char *Tout;
+		Tout = (unsigned char*) malloc(8* sizeof(unsigned char*));
+		for(j = 0; j < 48; j++)
+		{
+			if(j % 6 == 0)
+				Tout[j/6] = 0;
+			int bit = 0;
+			bit = (Eout[j/8] >> (7-(j%8)))&1;
+			int bit2 = 0;
+			bit2 = (keys[i][j/8] >> (7-(j%8)))&1;
+			bit ^= bit2;
+			Tout[j/6] <<=1;
+			Tout[j/6] += bit;
+		}
+
+		unsigned char *Tout2;
+		Tout2 = (unsigned char*) malloc( 8 * sizeof(unsigned char*));
+		for(j = 0; j < 8; j++)
+		{
+			int r = 0;
+			r = 2*((Tout[j] >> 5)&1);
+			r += Tout[j] &1;
+			int c = 0;
+			int k = 0;
+			for(k = 0; k < 4; k++)
+			{
+				c <<= 1;
+				c += (Tout[j] >> (4-k))&1;
+			}
+			Tout2[j] = S[j][r*16+c];
+		}
+		unsigned char *Tout3;
+		Tout3 = (unsigned char*) malloc(4*sizeof(unsigned char*));
+		for(j = 0; j < 32; j++)
+		{
+			Tout3[j/8] <<=1;
+			Tout3[j/8] += (Tout2[(P[j]-1)/4] >> (3-((P[j]-1)%4)))&1; 
+		}
+		unsigned char* new_message;
+		new_message = (unsigned char*) malloc(8 * sizeof(unsigned char*));
+		int z = 0;
+		for(z = 0; z < 4; z++)
+		{
+			new_message[z] = message[z+4];
+		}
+			//last part
+		for(z = 0; z < 4; z++)
+		{
+			new_message[z+4] = message[z] ^ Tout3[z];
+		}
+		message = new_message;
+	}
+	int j = 0;
+
+	if(done == 0)
+	{
+		fprintf(stderr,"(L%d,R%d)=", i, i);
+		for(j = 0; j < 8; j++)
+		{
+			fprintf(stderr, "%02x", message[j]);
+		}
+		fprintf(stderr, "\n");
+	}
+
+
+		//swap left and right
+	unsigned char* right;
+	right = (unsigned char*) malloc(4*sizeof(unsigned char*));
+	unsigned char* left;
+	left = (unsigned char*) malloc(4*sizeof(unsigned char*));
+	right = message+4;
+	left = message;
+	unsigned char* result_tmp;
+	result_tmp = (unsigned char *) malloc(8*sizeof(unsigned char*));
+
+	for(j = 0; j < 4; j++)
+	{
+		result_tmp[j] = right[j];
+	}
+	for(j = 0; j < 4; j++)
+	{
+		result_tmp[j+4] = left[j];
+	}
+
+//done till here
+		//result = (unsigned char *) malloc(8*sizeof(unsigned char*));
+		for(j = 0; j < 64; j++)
+		{
+			result[j/8] <<= 1;
+			result[j/8] += ((result_tmp[(invIP[j]-1)/8]) >> (7-((invIP[j]-1)%8)))&1;
+		}
+}
+
+void createTables(FILE *tableFile, int *IP, int *E, int *V, int *P, int *PC1, int *PC2, int S[][64])
+{
+	char line[1000];
+	int lineP = 0;
+	int i = 0;
+	int size = 0;
+	char *buf = (char *) malloc(sizeof(char*));
+	for(i = 0; i < 14; i++)
+	{
+		size = fread(buf, 1, 1, tableFile);
+		while(buf[0] != '\n')
+		{
+			line[lineP] = buf[0];
+			lineP++;	
+			size = fread(buf, 1, 1, tableFile);
+		}
+
+		line[lineP] = '\0';
+
+		char *ptr = strchr(line, '=');
+		ptr[0] = '\0';
+		char *key = line;
+		char *value = ptr+1;
+
+		if(strcmp(key, "IP") == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			for(j = 0; j < 64; j++)
+			{
+				IP[j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+		else if(strcmp(key, "E") == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			for(j = 0; j < 48; j++)
+			{
+				E[j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+		else if(strcmp(key, "V") == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			for(j = 0; j < 16; j++)
+			{
+				V[j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+
+		else if(strcmp(key, "P") == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			for(j = 0; j < 32; j++)
+			{
+				P[j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+		else if(strncmp(key, "S",1) == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			char *pointer = key+1;
+			int s = atoi(pointer);
+			for(j = 0; j < 64; j++)
+			{
+				S[s-1][j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+		else if(strcmp(key, "PC1") == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			for(j = 0; j < 56; j++)
+			{
+				PC1[j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+		else if(strcmp(key, "PC2") == 0)
+		{
+			int j =0;
+			char *a = strtok(value, ",");
+			for(j = 0; j < 48; j++)
+			{
+				PC2[j] = atoi(a);
+				a = strtok(NULL, ",");
+			}
+		}
+		lineP = 0;
+		line[0] = '\0';
+	}
+	
+}
+
+void inverseIP(int *ip, int* invip)
+{
+	int i = 0;
+	for(i = 0; i < 64; i++)
+	{
+		invip[ip[i]-1] = i+1;
+	}
+}
+
+void keyGenerator(char* key,unsigned char keys[][6], int *PC1, int *V, int *PC2)
+{
+	// convert key to hex
+	int i = 0;
+	unsigned char hex[8] = "";
+	for(i = 0; i < 8; i++)
+	{
+		char *tmp = (char *)malloc(2*sizeof(char*));
+		tmp[0] = key[i*2];
+		tmp[1] = key[i*2+1];
+		tmp[2] = '\0';
+		hex[i] = strtol(tmp, NULL, 16);
+	}
+	unsigned char *keygen;
+	keygen = (unsigned char*) malloc(7*sizeof(char*));
+
+	for(i = 0; i < 56; i++)
+	{
+		keygen[i/8] <<= 1;
+		keygen[i/8] += (hex[PC1[i]/8] >> (8-PC1[i]%8)) & 1;
+	}
+
+	fprintf(stderr, "(C0,D0)=");
+	for(i = 0; i < 7; i++)
+	{
+		fprintf(stderr, "%02x", keygen[i]);
+	}
+	fprintf(stderr, "\n");
+
+	int k = 0;
+	for(k = 0; k < 16; k++)
+	{
+		unsigned char *keygen_new;
+		keygen_new = (unsigned char *) malloc(7*sizeof(char*));
+		unsigned int bits = 0;
+		for(i = 0; i < 3; i++)
+		{
+			keygen_new[i] = keygen[i] << V[k];
+			int m =0;
+			for(m = 0; m < V[k]; m++)
+			{
+				bits = keygen[i+1] >> (7-m);
+			}
+			keygen_new[i] += bits;
+		}
+		int j = 0;
+		bits = 0;
+		for(j = V[k]; j < 4; j++)
+		{
+			bits <<= 1;
+			bits += (keygen[i] >> (7-j))&1;
+		}
+
+		for(j = 0; j < V[k]; j++)
+		{
+			bits <<= 1;
+			bits += (keygen[0] >> (7-j)) & 1;
+		}
+
+		for(j = 3-V[k]; j >= 0; j--)
+		{
+			bits <<= 1;
+			bits += (keygen[i] >> j)&1;
+		}
+
+		for(j = 0; j < V[k]; j++)
+		{
+			bits <<= 1;
+			bits += (keygen[i+1] >> (7-j))&1;
+
+		}
+		//d
+		keygen_new[i] = bits;
+		for(i = 4; i < 6; i++)
+		{
+			keygen_new[i] = keygen[i] << V[k];
+			int m =0;
+			for(m = 0; m < V[k]; m++)
+			{
+				bits = keygen[i+1] >> (7-m);
+			}
+			keygen_new[i] += bits;
+		}
+		bits = 0;
+		for(j = V[k]; j < 8; j++)
+		{
+			bits <<= 1;
+			bits += (keygen[i] >> (7-j))&1;
+		}
+
+		for(j = 0; j < V[k]; j++)
+		{
+			bits <<=1;
+			bits += (keygen[3] >> (3-j))&1;
+		}
+		keygen_new[i] = bits;
+		fprintf(stderr, "(C%d,D%d)=",k+1,k+1);
+		for(j = 0; j < 7;j++)
+		{
+			fprintf(stderr, "%02x", keygen_new[j]);
+		}
+		fprintf(stderr,"\n");
+		keygen = keygen_new;
+
+		//creating keys
+
+		for(j = 0; j < 48; j++)
+		{
+			keys[k][j/8] <<= 1;
+			keys[k][j/8] += (keygen[(PC2[j]-1)/8] >> (7-((PC2[j]-1)%8)))&1;
+		}
+		fprintf(stderr,"k%d=", k+1);
+		for(j = 0; j < 6; j++)
+		{
+			fprintf(stderr, "%02x", keys[k][j]);
+		}
+		fprintf(stderr, "\n");
+	}
+
+}
+
+void encryptFromKey(char *key, char *tablefile)
+{
+	// get the key first
+	FILE *tableFile = fopen(tablefile, "r");
+	if(tableFile == NULL)
+	{
+		printf("the file %s does not exist\n", tablefile);
+	}
+	//parse the table file
+	int IP[64];
+	int E[48];
+	int V[16];
+	int P[32];
+	int PC1[56];
+	int PC2[48];
+	int S[8][64];
+	int invIP[64];
+
+	tablecheck(tablefile);
+
+	createTables(tableFile, IP, E, V, P, PC1, PC2, S);
+	fclose(tableFile);
+	inverseIP(IP, invIP);
+
+	unsigned char keys[16][6];
+
+	keyGenerator(key, keys, PC1, V, PC2);
+	int i = 0;
+
+	unsigned char buf1[8];
+	int done = 0;
+	int size =0;
+
+	while((size = fread(buf1,1,8,stdin)) > 0)
+	{
+		if(size != 8)
+		{
+			for(i = size; i < 8; i++)
+				buf1[i] = '\0';
+		}
+		unsigned char result[8]={0,};
+		encryption(buf1, keys, S, P, IP, invIP, E, result, done);
+		int j =0;
+		for(j = 0; j < 8; j++)
+		{
+			printf("%c", result[j]);
+		}
+
+		done++;
+	} 
+}
+
+void encrypt(char *key, char *tablefile, char *input)
+{
+	// get the key first
+	FILE *tableFile = fopen(tablefile, "r");
+	if(tableFile == NULL)
+	{
+		printf("the file %s does not exist\n", tablefile);
+	}
+	//parse the table file
+	int IP[64];
+	int E[48];
+	int V[16];
+	int P[32];
+	int PC1[56];
+	int PC2[48];
+	int S[8][64];
+	int invIP[64];
+
+	tablecheck(tablefile);
+
+	createTables(tableFile, IP, E, V, P, PC1, PC2, S);
+	fclose(tableFile);
+	inverseIP(IP, invIP);
+
+	unsigned char keys[16][6];
+
+	keyGenerator(key, keys, PC1, V, PC2);
+	int i = 0;
+
+	unsigned char buf1[8];
+	FILE *inputFile = fopen(input, "r");
+	if(inputFile == NULL)
+	{
+		printf("The file %s does not exist", input);
+		exit(0);
+	}
+	int done = 0;
+	int size =0;
+
+	while((size = fread(buf1,1,8,inputFile)) > 0)
+	{
+		if(size != 8)
+		{
+			for(i = size; i < 8; i++)
+				buf1[i] = '\0';
+		}
+		unsigned char result[8]={0,};
+		encryption(buf1, keys, S, P, IP, invIP, E, result, done);
+		int j =0;
+		for(j = 0; j < 8; j++)
+		{
+			printf("%c", result[j]);
+		}
+
+		done++;
+	} 
+}

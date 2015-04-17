@@ -1,0 +1,10 @@
+void generateMixColTable(unsigned char [], unsigned char [][4]);
+void MixCol(unsigned char [][4], unsigned char [][4]);
+void xorOperation(unsigned char [][4], unsigned char [][4]);
+void generateW(char *, unsigned char [][16], unsigned char [][4]);
+void generateRoundKey(unsigned char [][4], unsigned char [][4], int );
+void subBytes(unsigned char [][16], unsigned char [][4]);
+void generateState(char *, unsigned char [][4]);
+void createKey(char [], unsigned char []);
+void encryptFromKey(char *, char*);
+void encryptFromFile(char *, char *, char *);
